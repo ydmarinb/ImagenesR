@@ -1,0 +1,124 @@
+---
+title: "Tratar imagen con R"
+author: "Daniel Marín"
+date: "13 de agosto de 2018"
+output: html_document
+---
+
+Instalamos los paquetes
+
+```{r eval=FALSE}
+install.packages(c("OpenImageR","ClusterR"))
+```
+
+Ubicamos nuestro directorio de trabajo
+
+```{r eval=FALSE}
+getwd() #Obtenemos el directorio de trabajo
+setwd("../Desktop/Imagenes en R") #Cambiamos directorio de trabajo
+
+```
+
+Cargamos las librerias
+
+```{r message=FALSE, warning=FALSE}
+library(OpenImageR)
+library(ClusterR)
+```
+Cargamos la imagen del gato
+
+```{r}
+imagen <- "Gato.jpg"
+img <-OpenImageR::readImage(imagen)
+```
+
+Redimencionamos la imagen
+
+```{r}
+imagen.rescal <- resizeImage(img, 350, 350, method = "bilinear" )
+```
+
+* __nearest = __ Simplemente aumenta el tamaño de cada píxel.
+* __Bilineal = __ Tiene en cuenta los valores en los píxeles conocidos que rodean a uno
+dado en una vecindad de los 2x2 píxeles más cercanos. y Luego promedio estos valores para obtener el nuevo varlor.
+
+
+Mostrar imagen
+
+```{r}
+imageShow(img)
+```
+
+Vectorizar la imagen
+
+```{r}
+img.vector <- apply(imagen.rescal, 3, as.vector)
+dim(img.vector)
+```
+
+Utilizamos el metodo de minibatch para segmentar la imagen
+
+```{r}
+mbkm <- MiniBatchKmeans(img.vector,clusters =10, batch_size = 20, num_init =5,
+                        max_iters = 100, init_fraction = 0.2, early_stop_iter = 10
+                        , verbose = F, initializer = "kmeans++")
+
+```
+
+* __Clusters = __ Es el número de cluster que queremos
+* __ batch_size = __ Es el ta,año del mini batch
+* __ num_init = __ Número de veces que el algoritmos debe ser corrido con diferentes centriodes
+* __ max_iters = __ Numero maximo de iteraciones 
+* __ init_fraction = __ Porcentaje de datos para inicializar los centros
+* __ initializer = __ Metodo de inicio optimal_init, quantile_init, kmeans++ and random.
+* __ early_stop_iter = __ Número de iteraciones despues de calcular los centroids con el mejor error cuadratico medio.
+* __ verbose __ = Indica si queremos que el proceso se muestre.
+
+
+```{r}
+mbkm
+```
+
+
+Predeccimos sobre el modelo construido anteriormente
+
+```{r}
+prmb <- predict_MBatchKMeans(img.vector,mbkm$centroids)
+```
+
+Obtenemos los k centroides
+
+```{r}
+getcetro <- mbkm$centroids
+```
+
+Construimos la nueva imagen predicha
+
+```{r}
+newimg <- getcetro[prmb,]
+```
+
+Redimencionamos la nueva imagen
+
+```{r}
+dim(newimg) <- c(nrow(imagen.rescal),ncol(imagen.rescal),3)
+```
+
+Mostramos la nueva imagen
+
+```{r}
+imageShow(newimg)
+```
+
+
+## Exportar las imagen
+
+```{r}
+pdf(file="Gato.pre.pdf",width = 3000, height = 3000,)
+imageShow(newimg)
+dev.off()
+```
+
+
+
+
